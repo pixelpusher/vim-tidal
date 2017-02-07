@@ -21,14 +21,23 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 BOOT_PATH=${BOOT_PATH:-"$DIR/../BootTidal.hss"}
 
+
+#Setup a file that automatically starts superdirt and includes settings
+SUPERCOLLIDER_FILE=${SUPERCOLLIDER_FILE:-"$DIR/../settings.scd"}
+
+
 # Check if tmux session "tidal" is running, attach only
 # else, create new session, split windows and run processes
-
 $TMUX attach-session -t $SESSION || $TMUX \
   new-session -s $SESSION   \; \
   split-window -h -t $SESSION   \; \
-  send-keys -t 0 "vim $FILE" C-m   \; \
+  send-keys -t 0 "vim $FILE -R" C-m   \; \
+  selectp -t 0 \; \
   send-keys -t 1 "TIDAL_TEMPO_IP=$TEMPO_HOST $GHCI -XOverloadedStrings" C-m   \; \
   load-buffer $BOOT_PATH   \; \
   paste-buffer -d -t 1  \; \
-  select-pane -t 0
+  selectp -t 0 \; \
+  send-keys ":tabnew $SUPERCOLLIDER_FILE" C-m   \; \
+  send-keys ":SClangStart" C-m   \; \
+  selectp -t 0 \; \
+  send-keys ":call SClang_block()" C-m\; \
