@@ -17,6 +17,10 @@ function! s:TmuxSend(config, text)
     call system(l:prefix . " load-buffer " . g:tidal_paste_file)
   end
   call system(l:prefix . " paste-buffer -d -t " . shellescape(a:config["target_pane"]))
+  " debugging log code:
+  " execute printf('redir >> %s', "~/.vim/log.txt")
+  " silent echo l:prefix . " paste-buffer -d -t " . shellescape(a:config["target_pane"])
+  " redir END
 endfunction
 
 function! s:TmuxPaneNames(A,L,P)
@@ -216,7 +220,8 @@ if !exists("g:tidal_paste_file")
 endif
 
 if !exists("g:tidal_default_config")
-  let g:tidal_default_config = { "socket_name": "default", "target_pane": "tidal:0.2" }
+  "let g:tidal_default_config = { "socket_name": "default", "target_pane": "tidal:0.2" }
+  let g:tidal_default_config = { "socket_name": "default", "target_pane": "{right}" }
 endif
 
 if !exists("g:tidal_preserve_curpos")

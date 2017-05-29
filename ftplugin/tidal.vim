@@ -62,7 +62,8 @@ function! Wrap_if_multi(lines)
 endfunction
 
 function! Add_Cycle_Pos_Defs(lines)
-    return s:cycle_position_defs + a:lines
+    "return s:cycle_position_defs + a:lines
+    return a:lines
 endfunction
 
 " change string into array of lines
