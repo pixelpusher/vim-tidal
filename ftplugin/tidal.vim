@@ -6,9 +6,9 @@ let s:not_prefixable_keywords = [ "import", "data", "instance", "class", "{-#", 
 let s:cycle_position_defs = [
   \"now' <- getNow",
   \"let now = nextSam now'",
-  \"let retrig = (now ~>)",
-  \"let fadeOut n = spread' (degradeBy) (retrig $ slow n $ envL)",
-  \"let fadeIn n = spread' (degradeBy) (retrig $ slow n $ (1-) <$> envL)"
+  \"let retrig = (now `rotR`)",
+  \"let fadeOut n = spread' (_degradeBy) (retrig $ slow n $ envL)",
+  \"let fadeIn n = spread' (_degradeBy) (retrig $ slow n $ (1-) <$> envL)"
 \]
 
 " guess correct number of spaces to indent
@@ -97,6 +97,7 @@ if !exists("g:tidal_no_mappings") || !g:tidal_no_mappings
 
   if !hasmapto('<Plug>TidalRegionSend', 'x')
     xmap <buffer> <localleader>s  <Plug>TidalRegionSend
+    xmap <buffer> <c-e> <Plug>TidalRegionSend
   endif
 
   if !hasmapto('<Plug>TidalLineSend', 'n')
@@ -105,12 +106,17 @@ if !exists("g:tidal_no_mappings") || !g:tidal_no_mappings
 
   if !hasmapto('<Plug>TidalParagraphSend', 'n')
     nmap <buffer> <localleader>ss <Plug>TidalParagraphSend
+    nmap <buffer> <c-e> <Plug>TidalParagraphSend
   endif
 
+  imap <buffer> <c-e> <Esc><Plug>TidalParagraphSend<Esc>i<Right>
+
   nnoremap <buffer> <localleader>h :TidalHush<cr>
+  nnoremap <buffer> <c-h> :TidalHush<cr>
   let i = 1
   while i <= 9
     execute 'nnoremap <buffer> <localleader>'.i.'  :TidalSilence '.i.'<cr>'
+    execute 'nnoremap <buffer> <c-'.i.'>  :TidalSilence '.i.'<cr>'
     execute 'nnoremap <buffer> <localleader>s'.i.' :TidalPlay '.i.'<cr>'
     let i += 1
   endwhile

@@ -84,6 +84,14 @@ function! s:TidalGetConfig()
   end
 endfunction
 
+function! s:TidalFlashVisualSelection()
+  " Redraw to show current visual selection, and sleep
+  redraw
+  execute "sleep " . g:tidal_flash_duration . " m"
+  " Then leave visual mode
+  silent exe "normal! vv"
+endfunction
+
 function! s:TidalSendOp(type, ...) abort
   call s:TidalGetConfig()
 
@@ -105,6 +113,12 @@ function! s:TidalSendOp(type, ...) abort
   call setreg('"', @", 'V')
   call s:TidalSend(@")
 
+  " Flash selection
+  if a:type == 'line'
+    silent exe "normal! '[V']"
+    call s:TidalFlashVisualSelection()
+  endif
+
   let &selection = sel_save
   call setreg('"', rv, rt)
 
@@ -116,7 +130,7 @@ function! s:TidalSendRange() range abort
 
   let rv = getreg('"')
   let rt = getregtype('"')
-  sil exe a:firstline . ',' . a:lastline . 'yank'
+  silent execute a:firstline . ',' . a:lastline . 'yank'
   call s:TidalSend(@")
   call setreg('"', rv, rt)
 endfunction
@@ -126,14 +140,27 @@ function! s:TidalSendLines(count) abort
 
   let rv = getreg('"')
   let rt = getregtype('"')
-  exe "norm! " . a:count . "yy"
+
+  silent execute "normal! " . a:count . "yy"
+
   call s:TidalSend(@")
   call setreg('"', rv, rt)
+
+  " Flash lines
+  silent execute "normal! V"
+  if a:count > 1
+    silent execute "normal! " . (a:count - 1) . "\<Down>"
+  endif
+  call s:TidalFlashVisualSelection()
 endfunction
 
 function! s:TidalStoreCurPos()
   if g:tidal_preserve_curpos == 1
-    let s:cur = getpos('.')
+    if exists("*getcurpos")
+      let s:cur = getcurpos()
+    else
+      let s:cur = getpos('.')
+    endif
   endif
 endfunction
 
@@ -143,6 +170,8 @@ function! s:TidalRestoreCurPos()
   endif
 endfunction
 
+let s:parent_path = fnamemodify(expand("<sfile>"), ":p:h:s?/plugin??")
+
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Public interface
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -150,9 +179,6 @@ endfunction
 function! s:TidalSend(text)
   call s:TidalGetConfig()
 
-  " this used to return a string, but some receivers (coffee-script)
-  " will flush the rest of the buffer given a special sequence (ctrl-v)
-  " so we, possibly, send many strings -- but probably just one
   let pieces = s:_EscapeText(a:text)
   for piece in pieces
     call s:TidalDispatch('Send', b:tidal_config, piece)
@@ -176,16 +202,38 @@ function! s:TidalHush()
 endfunction
 
 function! s:TidalSilence(stream)
-  execute 'TidalSend1 d' . a:stream . ' silence'
+  silent execute 'TidalSend1 d' . a:stream . ' silence'
 endfunction
 
 function! s:TidalPlay(stream)
   let res = search('^\s*d' . a:stream)
   if res > 0
-    execute "normal! vip:TidalSend\<cr>"
+    silent execute "normal! vip:TidalSend\<cr>"
+    silent execute "normal! vip"
+    call s:TidalFlashVisualSelection()
   else
     echo "d" . a:stream . " was not found"
   endif
+endfunction
+
+function! s:TidalGenerateCompletions(path)
+  let l:exe = s:parent_path . "/bin/generate-completions"
+  let l:output_path = s:parent_path . "/.dirt-samples"
+
+  if !empty(a:path)
+    let l:sample_path = a:path
+  else
+    if has('macunix')
+      let l:sample_path = "~/Library/Application Support/SuperCollider/downloaded-quarks/Dirt-Samples"
+    elseif has('unix')
+      let l:sample_path = "~/.local/share/SuperCollider/downloaded-quarks/Dirt-Samples"
+    endif
+  endif
+  " generate completion file
+  silent execute '!' . l:exe shellescape(expand(l:sample_path)) shellescape(expand(l:output_path))
+  echo "Generated dictionary of dirt-samples"
+  " setup completion
+  let &l:dictionary .= ',' . l:output_path
 endfunction
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -199,6 +247,7 @@ command -nargs=+ TidalSend1 call s:TidalSend(<q-args> . "\r")
 command! -nargs=0 TidalHush call s:TidalHush()
 command! -nargs=1 TidalSilence call s:TidalSilence(<args>)
 command! -nargs=1 TidalPlay call s:TidalPlay(<args>)
+command! -nargs=? TidalGenerateCompletions call s:TidalGenerateCompletions(<q-args>)
 
 noremap <SID>Operator :<c-u>call <SID>TidalStoreCurPos()<cr>:set opfunc=<SID>TidalSendOp<cr>g@
 
@@ -227,3 +276,11 @@ endif
 if !exists("g:tidal_preserve_curpos")
   let g:tidal_preserve_curpos = 1
 end
+
+if !exists("g:tidal_flash_duration")
+  let g:tidal_flash_duration = 150
+end
+
+if filereadable(s:parent_path . "/.dirt-samples")
+  let &l:dictionary .= ',' . s:parent_path . "/.dirt-samples"
+endif
